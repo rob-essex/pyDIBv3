@@ -17,18 +17,20 @@ ATOM_FEED_BASE_URL = "https://www.fpds.gov/ezsearch/FEEDS/ATOM"
 # award sample: https://www.fpds.gov/ezsearch/FEEDS/ATOM?FEEDNAME=PUBLIC&q=LAST_MOD_DATE:[2023/03/21,2023/03/21]
 # IDV sample: https://www.fpds.gov/ezsearch/FEEDS/ATOM?s=FPDS&FEEDNAME=PUBLIC&VERSION=1.5.3&q=PIID%3AW31P4Q08D0006
 
-def fetch_fpds_data(start_date, end_date):
-    # Construct the query URL
-    # Example: &LAST_MOD_DATE:[2018-04-01,2018-04-30]
-    query_param = f"LAST_MOD_DATE:[{start_date},{end_date}]"
-    url = f"{ATOM_FEED_BASE_URL}?FEEDNAME=PUBLIC&q={query_param}"
-    print(url)
+
+def fetch_fpds_data(start_date, end_date, url=None):
+    if not url:
+        # Construct the query URL for the first call
+        # Example: &LAST_MOD_DATE:[2018-04-01,2018-04-30]
+        query_param = f"LAST_MOD_DATE:[{start_date},{end_date}]"
+        url = f"{ATOM_FEED_BASE_URL}?FEEDNAME=PUBLIC&q={query_param}"
+    print("Fetching URL:", url)
 
     response = requests.get(url)
     return response.text
 
-def parse_xml(xml_data):
-    ns = {'atom': 'http://www.w3.org/2005/Atom', 'ns1': 'https://www.fpds.gov/FPDS'}
+
+def parse_xml(xml_data, ns={'atom': 'http://www.w3.org/2005/Atom', 'ns1': 'https://www.fpds.gov/FPDS'}):
     root = ET.fromstring(xml_data)
     entries = root.findall('atom:entry', ns)
     # test url: https://www.fpds.gov/ezsearch/FEEDS/ATOM?FEEDNAME=PUBLIC&q=LAST_MOD_DATE:[2023-11-01,2023-11-02]
@@ -52,10 +54,14 @@ def parse_xml(xml_data):
         ultimateParentUEI = entry.find('.//ns1:ultimateParentUEI', ns).text
         ultimateParentUEIName = entry.find('.//ns1:ultimateParentUEIName', ns).text
         obligatedAmount = entry.find('.//ns1:obligatedAmount', ns).text
-        baseAndExercisedOptionsValue = entry.find('.//ns1:baseAndExercisedOptionsValue', ns).text
+        baseAndExercisedOptionsElement = entry.find('.//ns1:baseAndExercisedOptionsValue', ns)
+        baseAndExercisedOptionsValue = baseAndExercisedOptionsElement.text if baseAndExercisedOptionsElement \
+                                                                              is not None else 'Not Available'
         baseAndAllOptionsValue = entry.find('.//ns1:baseAndAllOptionsValue', ns).text
         signedDate = entry.find('.//ns1:signedDate', ns).text
-        currentCompletionDate = entry.find('.//ns1:currentCompletionDate', ns).text
+        currentCompletionElement = entry.find('.//ns1:currentCompletionDate', ns)
+        currentCompletionDate = currentCompletionElement.text if currentCompletionElement is not None else \
+            'Not Available'
         fundingRequestingDepartmentID = entry.find('.//ns1:fundingRequestingAgencyID', ns).get('departmentID')
         fundingRequestingDepartmentName = entry.find('.//ns1:fundingRequestingAgencyID', ns).get('departmentName')
         fundingRequestingAgencyID = entry.find('.//ns1:fundingRequestingAgencyID', ns).text
@@ -83,7 +89,17 @@ def parse_xml(xml_data):
         print(record)
         records.append(record)
 
-    return records
+        # Check for a next link for pagination
+        next_link = root.find(".//atom:link[@rel='next']", ns)
+        if next_link is not None:
+            next_url = next_link.get('href')
+            if next_url:
+                # Fetch the next page of data
+                next_page_data = fetch_fpds_data(None, None, url=next_url)
+                # Parse the next page and extend the records list
+                records.extend(parse_xml(next_page_data, ns))
+
+        return records
 
 
 def output_csv(records, filename="fpds_data.csv"):
@@ -133,7 +149,7 @@ def main():
 
     xml_data = fetch_fpds_data(start_date, end_date)
     records = parse_xml(xml_data)
-    output_csv(records,'fpds_data.csv')
+    output_csv(records, 'fpds_data.csv')
     # insert_into_db(records)  # enable to insert into postgres
 
     print('Job complete.')
