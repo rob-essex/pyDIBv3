@@ -18,12 +18,17 @@ ATOM_FEED_BASE_URL = "https://www.fpds.gov/ezsearch/FEEDS/ATOM"
 # IDV sample: https://www.fpds.gov/ezsearch/FEEDS/ATOM?s=FPDS&FEEDNAME=PUBLIC&VERSION=1.5.3&q=PIID%3AW31P4Q08D0006
 
 
-def fetch_fpds_data(start_date, end_date, url=None):
+def fetch_fpds_data(start_date, end_date, ult_UEI, url=None):
     if not url:
         # Construct the query URL for the first call
         # Example: &LAST_MOD_DATE:[2018-04-01,2018-04-30]
-        query_param = f"LAST_MOD_DATE:[{start_date},{end_date}]"
-        url = f"{ATOM_FEED_BASE_URL}?FEEDNAME=PUBLIC&q={query_param}"
+
+        date_query_param = f"+LAST_MOD_DATE:[{start_date},{end_date}]"
+        UEI_query_param = f"+ULTIMATE_UEI:\"{ult_UEI}\""
+
+        url = f"{ATOM_FEED_BASE_URL}?FEEDNAME=PUBLIC&q={date_query_param}{UEI_query_param}"
+
+    # test url https://www.fpds.gov/ezsearch/FEEDS/ATOM?FEEDNAME=PUBLIC&q=LAST_MOD_DATE:[2016-01-01,2023-12-31]+ULTIMATE_UEI:"W6ZWNL4GWP97"
     print("Fetching URL:", url)
 
     response = requests.get(url)
@@ -31,9 +36,11 @@ def fetch_fpds_data(start_date, end_date, url=None):
 
 
 def parse_xml(xml_data, ns={'atom': 'http://www.w3.org/2005/Atom', 'ns1': 'https://www.fpds.gov/FPDS'}):
+    # Query structure available at https://www.fpds.gov/wiki/index.php/Atom_Feed_Usage
     root = ET.fromstring(xml_data)
     entries = root.findall('atom:entry', ns)
     # test url: https://www.fpds.gov/ezsearch/FEEDS/ATOM?FEEDNAME=PUBLIC&q=LAST_MOD_DATE:[2023-11-01,2023-11-02]
+
 
     records = []
     for entry in entries:
@@ -89,17 +96,18 @@ def parse_xml(xml_data, ns={'atom': 'http://www.w3.org/2005/Atom', 'ns1': 'https
         print(record)
         records.append(record)
 
-        # Check for a next link for pagination
-        next_link = root.find(".//atom:link[@rel='next']", ns)
-        if next_link is not None:
-            next_url = next_link.get('href')
-            if next_url:
-                # Fetch the next page of data
-                next_page_data = fetch_fpds_data(None, None, url=next_url)
-                # Parse the next page and extend the records list
-                records.extend(parse_xml(next_page_data, ns))
+    # Check for a next link for pagination
+    next_link = root.find(".//atom:link[@rel='next']", ns)
+    if next_link is not None:
+        next_url = next_link.get('href')
+        if next_url:
+            # Fetch the next page of data
+            print("### GOING TO NEXT PAGE ###")
+            next_page_data = fetch_fpds_data(None, None, None, url=next_url)
+            # Parse the next page and extend the records list
+            records.extend(parse_xml(next_page_data, ns))
 
-        return records
+    return records
 
 
 def output_csv(records, filename="fpds_data.csv"):
@@ -144,10 +152,11 @@ def insert_into_db(records):
 
 
 def main():
-    start_date = datetime(2023, 11, 1).strftime('%Y-%m-%d')
-    end_date = datetime(2023, 11, 2).strftime('%Y-%m-%d')
+    start_date = datetime(2016, 1, 1).strftime('%Y-%m-%d')
+    end_date = datetime(2023, 12, 31).strftime('%Y-%m-%d')
+    ult_UEI = "W6ZWNL4GWP97"
 
-    xml_data = fetch_fpds_data(start_date, end_date)
+    xml_data = fetch_fpds_data(start_date, end_date, ult_UEI)
     records = parse_xml(xml_data)
     output_csv(records, 'fpds_data.csv')
     # insert_into_db(records)  # enable to insert into postgres
