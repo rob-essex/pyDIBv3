@@ -1,3 +1,4 @@
+import concurrent.futures
 import csv
 import requests
 import xml.etree.ElementTree as ET
@@ -154,10 +155,28 @@ def insert_into_db(records):
 def main():
     start_date = datetime(2016, 1, 1).strftime('%Y-%m-%d')
     end_date = datetime(2023, 12, 31).strftime('%Y-%m-%d')
-    ult_UEI = "W6ZWNL4GWP97"
 
-    xml_data = fetch_fpds_data(start_date, end_date, ult_UEI)
-    records = parse_xml(xml_data)
+    # Thread runs for each of the following UEIs - up to 10. Can be any criteria instead of UEI.
+    ult_UEIs = ["UEI1", "UEI2", "UEI3", "UEI4", "UEI5", "UEI6", "UEI7", "UEI8", "UEI9", "UEI10"]
+
+
+    records = []
+
+    # Use ThreadPoolExecutor to run fetch_fpds_data in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        # Map fetch_fpds_data across your UEIs
+        future_to_uei = {executor.submit(fetch_fpds_data, start_date, end_date, uei): uei for uei in ult_UEIs}
+
+        for future in concurrent.futures.as_completed(future_to_uei):
+            uei = future_to_uei[future]
+            try:
+                xml_data = future.result()
+                these_records = parse_xml(xml_data)
+                records.extend(these_records)
+            except Exception as exc:
+                print(f"{uei} generated an exception: {exc}")
+
+    # Once all threads complete, you can process the records as before
     output_csv(records, 'fpds_data.csv')
     # insert_into_db(records)  # enable to insert into postgres
 
