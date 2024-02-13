@@ -78,17 +78,22 @@ def parse_xml(xml_data, ns={'atom': 'http://www.w3.org/2005/Atom', 'ns1': 'https
         fundingRequestingOfficeName = entry.find('.//ns1:fundingRequestingOfficeID', ns).get('name')
         contractingOfficeAgencyID = entry.find('.//ns1:contractingOfficeAgencyID', ns).text
         contractingOfficeID = entry.find('.//ns1:contractingOfficeID', ns).text
+
+
         createdBy = entry.find('.//ns1:createdBy', ns).text
-        createdDate = entry.find('.//ns1:createdBy', ns).text
-        lastModifiedBy = entry.find('.//ns1:createdBy', ns).text
-        lastModifiedDate = entry.find('.//ns1:createdBy', ns).text
-        approvedBy = entry.find('.//ns1:createdBy', ns).text
-        approvedDate = entry.find('.//ns1:createdBy', ns).text
-        closedBy = entry.find('.//ns1:createdBy', ns).text
-        closedDate = entry.find('.//ns1:createdBy', ns).text
+        createdDate = entry.find('.//ns1:createdDate', ns).text
+        lastModifiedBy = entry.find('.//ns1:lastModifiedBy', ns).text
+        lastModifiedDate = entry.find('.//ns1:lastModifiedDate', ns).text
+        approvedBy = entry.find('.//ns1:approvedBy', ns).text
+        approvedDate = entry.find('.//ns1:approvedDate', ns).text
+        closedByElement = entry.find('.//ns1:closedBy', ns)
+        closedBy = closedByElement.text if closedByElement is not None else 'Not Available'
+        closedDateElement = entry.find('.//ns1:closedDate', ns)
+        closedDate = closedDateElement.text if closedDateElement is not None else 'Not Available'
         # ... continue for other elements as per the FPDS feed
 
-        record = (title, modified, PIID, UEI, UEILegalBusinessName, ultimateParentUEI, ultimateParentUEIName,
+
+        record = (title, modified, PIID_text, UEI, UEILegalBusinessName, ultimateParentUEI, ultimateParentUEIName,
                   obligatedAmount, baseAndExercisedOptionsValue, baseAndAllOptionsValue, signedDate,
                   currentCompletionDate, fundingRequestingDepartmentID, fundingRequestingDepartmentName,
                   fundingRequestingAgencyID, fundingRequestingAgencyName, fundingRequestingOfficeID,
@@ -153,8 +158,8 @@ def insert_into_db(records):
 
 
 def main():
-    start_date = datetime(2016, 1, 1).strftime('%Y-%m-%d')
-    end_date = datetime(2023, 12, 31).strftime('%Y-%m-%d')
+    start_date = datetime(2014, 1, 1).strftime('%Y-%m-%d')
+    end_date = datetime(2024, 2, 9).strftime('%Y-%m-%d')
 
     # Thread runs for each of the following UEIs - up to 10. Can be any criteria instead of UEI.
     ult_UEIs = ["UEI1", "UEI2", "UEI3", "UEI4", "UEI5", "UEI6", "UEI7", "UEI8", "UEI9", "UEI10"]
