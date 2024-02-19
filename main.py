@@ -19,6 +19,44 @@ ATOM_FEED_BASE_URL = "https://www.fpds.gov/ezsearch/FEEDS/ATOM"
 # IDV sample: https://www.fpds.gov/ezsearch/FEEDS/ATOM?s=FPDS&FEEDNAME=PUBLIC&VERSION=1.5.3&q=PIID%3AW31P4Q08D0006
 
 
+def get_element_text(entry, element_name, ns, default='Not Available'):
+    """
+    Retrieves the text value of an XML element.
+
+    Args:
+        entry: The XML entry to search within.
+        element_name: The tag name of the element to find.
+        ns: The namespace dictionary.
+        default: The default value to return if the element is not found or has no text.
+
+    Returns:
+        The text of the found element, or the default value if not found.
+    """
+    # Correctly format the namespace and element name for the search
+    element = entry.find('.//{{{}}}{}'.format(ns['ns1'], element_name), ns)
+    return element.text if element is not None else default
+
+
+def get_element_attribute(entry, element_name, attribute_name, ns, default='Not Available'):
+    """
+    Retrieves the value of an attribute from an XML element.
+
+    Args:
+        entry: The XML entry to search within.
+        element_name: The tag name of the element to find.
+        attribute_name: The name of the attribute to retrieve.
+        ns: The namespace dictionary.
+        default: The default value to return if the element or attribute is not found.
+
+    Returns:
+        The value of the attribute, or the default value if the element or attribute is not found.
+    """
+    # Find the element using the provided namespace and element name
+    element = entry.find('.//{{{}}}{}'.format(ns['ns1'], element_name), ns)
+    # Return the attribute value if the element is found and the attribute exists, else return default
+    return element.get(attribute_name) if element is not None and element.get(attribute_name) is not None else default
+
+
 def fetch_fpds_data(start_date, end_date, ult_UEI, url=None):
     if not url:
         # Construct the query URL for the first call
@@ -52,48 +90,41 @@ def parse_xml(xml_data, ns={'atom': 'http://www.w3.org/2005/Atom', 'ns1': 'https
         modified = entry.find('atom:modified', ns).text
         print("Modified: " + str(modified))
 
-        PIID = entry.find('.//ns1:PIID', ns)
-        PIID_text = PIID.text if PIID is not None else 'Not Available'
-        print("PIID: " + str(PIID_text))
+        # PIID = entry.find('.//ns1:PIID', ns)
+        # PIID_text = PIID.text if PIID is not None else 'Not Available'
 
+        PIID = get_element_text(entry, 'PIID', ns)
+        print("PIID: " + str(PIID))
 
-        UEI = entry.find('.//ns1:UEI', ns).text
-        UEILegalBusinessName = entry.find('.//ns1:UEILegalBusinessName', ns).text
-        ultimateParentUEI = entry.find('.//ns1:ultimateParentUEI', ns).text
-        ultimateParentUEIName = entry.find('.//ns1:ultimateParentUEIName', ns).text
-        obligatedAmount = entry.find('.//ns1:obligatedAmount', ns).text
-        baseAndExercisedOptionsElement = entry.find('.//ns1:baseAndExercisedOptionsValue', ns)
-        baseAndExercisedOptionsValue = baseAndExercisedOptionsElement.text if baseAndExercisedOptionsElement \
-                                                                              is not None else 'Not Available'
-        baseAndAllOptionsValue = entry.find('.//ns1:baseAndAllOptionsValue', ns).text
-        signedDate = entry.find('.//ns1:signedDate', ns).text
-        currentCompletionElement = entry.find('.//ns1:currentCompletionDate', ns)
-        currentCompletionDate = currentCompletionElement.text if currentCompletionElement is not None else \
-            'Not Available'
-        fundingRequestingDepartmentID = entry.find('.//ns1:fundingRequestingAgencyID', ns).get('departmentID')
-        fundingRequestingDepartmentName = entry.find('.//ns1:fundingRequestingAgencyID', ns).get('departmentName')
-        fundingRequestingAgencyID = entry.find('.//ns1:fundingRequestingAgencyID', ns).text
-        fundingRequestingAgencyName = entry.find('.//ns1:fundingRequestingAgencyID', ns).get('name')
-        fundingRequestingOfficeID = entry.find('.//ns1:fundingRequestingOfficeID', ns).text
-        fundingRequestingOfficeName = entry.find('.//ns1:fundingRequestingOfficeID', ns).get('name')
-        contractingOfficeAgencyID = entry.find('.//ns1:contractingOfficeAgencyID', ns).text
-        contractingOfficeID = entry.find('.//ns1:contractingOfficeID', ns).text
-
-
-        createdBy = entry.find('.//ns1:createdBy', ns).text
-        createdDate = entry.find('.//ns1:createdDate', ns).text
-        lastModifiedBy = entry.find('.//ns1:lastModifiedBy', ns).text
-        lastModifiedDate = entry.find('.//ns1:lastModifiedDate', ns).text
-        approvedBy = entry.find('.//ns1:approvedBy', ns).text
-        approvedDate = entry.find('.//ns1:approvedDate', ns).text
-        closedByElement = entry.find('.//ns1:closedBy', ns)
-        closedBy = closedByElement.text if closedByElement is not None else 'Not Available'
-        closedDateElement = entry.find('.//ns1:closedDate', ns)
-        closedDate = closedDateElement.text if closedDateElement is not None else 'Not Available'
+        UEI = get_element_text(entry, 'UEI', ns)
+        UEILegalBusinessName = get_element_text(entry, 'UEILegalBusinessName', ns)
+        ultimateParentUEI = get_element_text(entry, 'ultimateParentUEI', ns)
+        ultimateParentUEIName = get_element_text(entry, 'ultimateParentUEIName', ns)
+        obligatedAmount = get_element_text(entry, 'obligatedAmount', ns)
+        baseAndExercisedOptionsValue = get_element_text(entry, 'baseAndExercisedOptionsValue', ns)
+        baseAndAllOptionsValue = get_element_text(entry, 'baseAndAllOptionsValue', ns)
+        signedDate = get_element_text(entry, 'signedDate', ns)
+        currentCompletionDate = get_element_text(entry, 'currentCompletionDate', ns)
+        fundingRequestingDepartmentID = get_element_attribute(entry, 'fundingRequestingAgencyID', 'departmentID', ns)
+        fundingRequestingDepartmentName = get_element_attribute(entry, 'fundingRequestingAgencyID', 'departmentName', ns)
+        fundingRequestingAgencyID = get_element_text(entry, 'fundingRequestingAgencyID', ns)
+        fundingRequestingAgencyName = get_element_attribute(entry, 'fundingRequestingAgencyID', 'name', ns)
+        fundingRequestingOfficeID = get_element_text(entry, 'fundingRequestingOfficeID', ns)
+        fundingRequestingOfficeName = get_element_attribute(entry, 'fundingRequestingOfficeID', 'name', ns)
+        contractingOfficeAgencyID = get_element_text(entry, 'contractingOfficeAgencyID', ns)
+        contractingOfficeID = get_element_text(entry, 'contractingOfficeID', ns)
+        createdBy = get_element_text(entry, 'createdBy', ns)
+        createdDate = get_element_text(entry, 'createdDate', ns)
+        lastModifiedBy = get_element_text(entry, 'lastModifiedBy', ns)
+        lastModifiedDate = get_element_text(entry, 'lastModifiedDate', ns)
+        approvedBy = get_element_text(entry, 'approvedBy', ns)
+        approvedDate = get_element_text(entry, 'approvedDate', ns)
+        closedBy = get_element_text(entry, 'closedBy', ns)
+        closedDate = get_element_text(entry, 'closedDate', ns)
         # ... continue for other elements as per the FPDS feed
 
 
-        record = (title, modified, PIID_text, UEI, UEILegalBusinessName, ultimateParentUEI, ultimateParentUEIName,
+        record = (title, modified, PIID, UEI, UEILegalBusinessName, ultimateParentUEI, ultimateParentUEIName,
                   obligatedAmount, baseAndExercisedOptionsValue, baseAndAllOptionsValue, signedDate,
                   currentCompletionDate, fundingRequestingDepartmentID, fundingRequestingDepartmentName,
                   fundingRequestingAgencyID, fundingRequestingAgencyName, fundingRequestingOfficeID,
@@ -158,12 +189,11 @@ def insert_into_db(records):
 
 
 def main():
-    start_date = datetime(2014, 1, 1).strftime('%Y-%m-%d')
-    end_date = datetime(2024, 2, 9).strftime('%Y-%m-%d')
+    start_date = datetime(2000, 1, 1).strftime('%Y-%m-%d')
+    end_date = datetime(2024, 2, 12).strftime('%Y-%m-%d')
 
     # Thread runs for each of the following UEIs - up to 10. Can be any criteria instead of UEI.
     ult_UEIs = ["UEI1", "UEI2", "UEI3", "UEI4", "UEI5", "UEI6", "UEI7", "UEI8", "UEI9", "UEI10"]
-
 
     records = []
 
