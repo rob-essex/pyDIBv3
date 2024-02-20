@@ -19,7 +19,7 @@ ATOM_FEED_BASE_URL = "https://www.fpds.gov/ezsearch/FEEDS/ATOM"
 # IDV sample: https://www.fpds.gov/ezsearch/FEEDS/ATOM?s=FPDS&FEEDNAME=PUBLIC&VERSION=1.5.3&q=PIID%3AW31P4Q08D0006
 
 
-def get_element_text(entry, element_name, ns, default='Not Available'):
+def get_element_text(entry, element_name, ns, default=''):
     """
     Retrieves the text value of an XML element.
 
@@ -37,7 +37,7 @@ def get_element_text(entry, element_name, ns, default='Not Available'):
     return element.text if element is not None else default
 
 
-def get_element_attribute(entry, element_name, attribute_name, ns, default='Not Available'):
+def get_element_attribute(entry, element_name, attribute_name, ns, default=''):
     """
     Retrieves the value of an attribute from an XML element.
 
@@ -57,15 +57,80 @@ def get_element_attribute(entry, element_name, attribute_name, ns, default='Not 
     return element.get(attribute_name) if element is not None and element.get(attribute_name) is not None else default
 
 
-def fetch_fpds_data(start_date, end_date, ult_UEI, url=None):
+def get_nested_element(entry, parent_element_name, child_element_name, ns, default=''):
+    """
+    Retrieves the text of a nested XML element.
+
+    Args:
+        entry: The XML entry to search within.
+        parent_element_name: The tag name of the parent element.
+        child_element_name: The tag name of the child element to find within the parent.
+        ns: The namespace dictionary.
+        default: The default value to return if the element is not found or has no text.
+
+    Returns:
+        The text of the found child element, or the default value if not found.
+    """
+    # Find the parent element
+    parent_element = entry.find('.//{{{}}}{}'.format(ns['ns1'], parent_element_name), ns)
+
+    if parent_element is not None:
+        # Find the child element within the parent
+        child_element = parent_element.find('.//{{{}}}{}'.format(ns['ns1'], child_element_name), ns)
+        return child_element.text if child_element is not None else default
+    else:
+        return default
+
+
+def get_nested_attribute(entry, parent_element_name, child_element_name, attribute_name, ns, default=''):
+    """
+    Retrieves the value of an attribute from a nested XML element.
+
+    Args:
+        entry: The XML entry to search within.
+        parent_element_name: The tag name of the parent element.
+        child_element_name: The tag name of the child element to find within the parent.
+        attribute_name: The name of the attribute within the child element whose value is to be returned.
+        ns: The namespace dictionary.
+        default: The default value to return if the element or attribute is not found.
+
+    Returns:
+        The value of the specified attribute, or the default value if not found.
+    """
+    # Find the parent element
+    parent_element = entry.find('.//{{{}}}{}'.format(ns['ns1'], parent_element_name), ns)
+
+    if parent_element is not None:
+        # Find the child element within the parent
+        child_element = parent_element.find('.//{{{}}}{}'.format(ns['ns1'], child_element_name), ns)
+        if child_element is not None and attribute_name in child_element.attrib:
+            return child_element.attrib[attribute_name]
+    return default
+
+
+def fetch_fpds_data(start_date, end_date, ult_UEI, NAICS, url=None):
     if not url:
         # Construct the query URL for the first call
         # Example: &LAST_MOD_DATE:[2018-04-01,2018-04-30]
 
-        date_query_param = f"+LAST_MOD_DATE:[{start_date},{end_date}]"
-        UEI_query_param = f"+ULTIMATE_UEI:\"{ult_UEI}\""
+        # date_query_param = f"+LAST_MOD_DATE:[{start_date},{end_date}]"  Testing build function
 
-        url = f"{ATOM_FEED_BASE_URL}?FEEDNAME=PUBLIC&q={date_query_param}{UEI_query_param}"
+        if start_date is None or end_date is None:
+            date_query_param = ''
+        else:
+            date_query_param = f"+LAST_MOD_DATE:[{start_date},{end_date}]"
+
+        if ult_UEI is None:
+            UEI_query_param = ''
+        else:
+            UEI_query_param = f"+ULTIMATE_UEI:\"{ult_UEI}\""
+
+        if NAICS is None:
+            NAICS_query_param = ''
+        else:
+            NAICS_query_param = f"+PRINCIPAL_NAICS_CODE:\"{NAICS}\""
+
+        url = f"{ATOM_FEED_BASE_URL}?FEEDNAME=PUBLIC&q={date_query_param}{UEI_query_param}{NAICS_query_param}"
 
     # test url https://www.fpds.gov/ezsearch/FEEDS/ATOM?FEEDNAME=PUBLIC&q=LAST_MOD_DATE:[2016-01-01,2023-12-31]+ULTIMATE_UEI:"W6ZWNL4GWP97"
     print("Fetching URL:", url)
@@ -90,21 +155,60 @@ def parse_xml(xml_data, ns={'atom': 'http://www.w3.org/2005/Atom', 'ns1': 'https
         modified = entry.find('atom:modified', ns).text
         print("Modified: " + str(modified))
 
-        # PIID = entry.find('.//ns1:PIID', ns)
-        # PIID_text = PIID.text if PIID is not None else 'Not Available'
+        # PIID = get_element_text(entry, 'PIID', ns) legacy
+        """
+        PIID = get_nested_element(entry, 'awardContractID', 'PIID', ns) if not None else \
+            get_nested_element(entry, 'IDVID', 'PIID', ns)
+        modNumber = get_nested_element(entry, 'awardContractID', 'modNumber', ns) if not None else\
+            get_nested_element(entry, 'IDVID', 'modNumber', ns)
+        """
+        referencedIDVPIID = get_nested_element(entry, 'referencedIDVID', 'PIID', ns)
+        IDVModNumber = get_nested_element(entry, 'referencedIDVID', 'modNumber', ns)
 
-        PIID = get_element_text(entry, 'PIID', ns)
-        print("PIID: " + str(PIID))
+        # Try to get the PIID from 'awardContractID' first
+        PIID = get_nested_element(entry, 'awardContractID', 'PIID', ns)
+        # If it wasn't found, try to get it from 'IDVID'
+        if PIID == '':
+            PIID = get_nested_element(entry, 'IDVID', 'PIID', ns)
+
+        # Try to get the modNumber from 'awardContractID' first
+        modNumber = get_nested_element(entry, 'awardContractID', 'modNumber', ns)
+        # If it wasn't found, try to get it from 'IDVID'
+        if modNumber == '':
+            modNumber = get_nested_element(entry, 'IDVID', 'modNumber', ns)
+
+        print(f"PIID:{PIID}  Ref IDV: {referencedIDVPIID}")
 
         UEI = get_element_text(entry, 'UEI', ns)
         UEILegalBusinessName = get_element_text(entry, 'UEILegalBusinessName', ns)
+        immediateParentUEI = get_element_text(entry, 'immediateParentUEI', ns)
+        immediateParentUEIName = get_element_text(entry, 'immediateParentUEIName', ns)
+        domesticParentUEI = get_element_text(entry, 'domesticParentUEI', ns)
+        domesticParentUEIName = get_element_text(entry, 'domesticParentUEIName', ns)
         ultimateParentUEI = get_element_text(entry, 'ultimateParentUEI', ns)
         ultimateParentUEIName = get_element_text(entry, 'ultimateParentUEIName', ns)
+        vendorName = get_element_text(entry, 'vendorName', ns)
+        vendorAlternateName = get_element_text(entry, 'vendorAlternateName', ns)
+        vendorLegalOrganizationName = get_element_text(entry, 'vendorLegalOrganizationName', ns)
+        vendorStreetAddress = get_nested_element(entry, 'vendorLocation', 'streetAddress', ns)
+        vendorCity = get_nested_element(entry, 'vendorLocation', 'city', ns)
+        vendorState = get_nested_element(entry, 'vendorLocation', 'state', ns)
+        vendorZIPCode = get_nested_element(entry, 'vendorLocation', 'ZIPCode', ns)
+        vendorCountryCode = get_nested_element(entry, 'vendorLocation', 'countryCode', ns)
+        vendorPhoneNo = get_nested_element(entry, 'vendorLocation', 'phoneNo', ns)
+        vendorFaxNo = get_nested_element(entry, 'vendorLocation', 'faxNo', ns)
+        vendorCongressionalDistrictCode = get_nested_element(entry, 'vendorLocation', 'congressionalDistrictCode', ns)
+        vendorEntityDataSource = get_nested_element(entry, 'vendorLocation', 'entityDataSource', ns)
         obligatedAmount = get_element_text(entry, 'obligatedAmount', ns)
         baseAndExercisedOptionsValue = get_element_text(entry, 'baseAndExercisedOptionsValue', ns)
         baseAndAllOptionsValue = get_element_text(entry, 'baseAndAllOptionsValue', ns)
+        totalObligatedAmount = get_element_text(entry, 'totalObligatedAmount', ns)
+        totalBaseAndExercisedOptionsValue = get_element_text(entry, 'totalBaseAndExercisedOptionsValue', ns)
+        totalBaseAndAllOptionsValue = get_element_text(entry, 'totalBaseAndAllOptionsValue', ns)
         signedDate = get_element_text(entry, 'signedDate', ns)
+        effectiveDate = get_element_text(entry, 'effectiveDate', ns)
         currentCompletionDate = get_element_text(entry, 'currentCompletionDate', ns)
+        ultimateCompletionDate = get_element_text(entry, 'ultimateCompletionDate', ns)
         fundingRequestingDepartmentID = get_element_attribute(entry, 'fundingRequestingAgencyID', 'departmentID', ns)
         fundingRequestingDepartmentName = get_element_attribute(entry, 'fundingRequestingAgencyID', 'departmentName', ns)
         fundingRequestingAgencyID = get_element_text(entry, 'fundingRequestingAgencyID', ns)
@@ -113,6 +217,14 @@ def parse_xml(xml_data, ns={'atom': 'http://www.w3.org/2005/Atom', 'ns1': 'https
         fundingRequestingOfficeName = get_element_attribute(entry, 'fundingRequestingOfficeID', 'name', ns)
         contractingOfficeAgencyID = get_element_text(entry, 'contractingOfficeAgencyID', ns)
         contractingOfficeID = get_element_text(entry, 'contractingOfficeID', ns)
+        principalNAICSCode = get_element_text(entry, 'principalNAICSCode', ns)
+        principalNAICSCodeDescription = get_element_attribute(entry, 'principalNAICSCode', 'description', ns)
+        productOrServiceCode = get_element_text(entry, 'productOrServiceCode', ns)
+        productOrServiceCodeDescription = get_element_attribute(entry, 'productOrServiceCode', 'description', ns)
+        productOrServiceCodeType = get_element_attribute(entry, 'productOrServiceCode', 'productOrServiceType', ns)
+        descriptionOfContractRequirement = get_element_text(entry, 'descriptionOfContractRequirement', ns)
+        reasonForModification = get_element_text(entry, 'reasonForModification', ns)
+        reasonForModificationDescription = get_element_attribute(entry, 'reasonForModification', 'description', ns)
         createdBy = get_element_text(entry, 'createdBy', ns)
         createdDate = get_element_text(entry, 'createdDate', ns)
         lastModifiedBy = get_element_text(entry, 'lastModifiedBy', ns)
@@ -124,11 +236,20 @@ def parse_xml(xml_data, ns={'atom': 'http://www.w3.org/2005/Atom', 'ns1': 'https
         # ... continue for other elements as per the FPDS feed
 
 
-        record = (title, modified, PIID, UEI, UEILegalBusinessName, ultimateParentUEI, ultimateParentUEIName,
-                  obligatedAmount, baseAndExercisedOptionsValue, baseAndAllOptionsValue, signedDate,
-                  currentCompletionDate, fundingRequestingDepartmentID, fundingRequestingDepartmentName,
+        record = (title, modified, PIID, modNumber, referencedIDVPIID, IDVModNumber, UEI, UEILegalBusinessName,
+                  immediateParentUEI, immediateParentUEIName, domesticParentUEI, domesticParentUEIName,
+                  ultimateParentUEI, ultimateParentUEIName, vendorName, vendorAlternateName, vendorLegalOrganizationName,
+                  vendorStreetAddress, vendorCity, vendorState, vendorZIPCode, vendorCountryCode, vendorPhoneNo,
+                  vendorFaxNo, vendorCongressionalDistrictCode, vendorEntityDataSource,
+                  obligatedAmount, baseAndExercisedOptionsValue, baseAndAllOptionsValue, totalObligatedAmount,
+                  totalBaseAndExercisedOptionsValue, totalBaseAndAllOptionsValue, signedDate, effectiveDate,
+                  currentCompletionDate, ultimateCompletionDate, fundingRequestingDepartmentID,
+                  fundingRequestingDepartmentName,
                   fundingRequestingAgencyID, fundingRequestingAgencyName, fundingRequestingOfficeID,
-                  fundingRequestingOfficeName, contractingOfficeAgencyID, contractingOfficeID, createdBy, createdDate,
+                  fundingRequestingOfficeName, contractingOfficeAgencyID, contractingOfficeID, principalNAICSCode,
+                  principalNAICSCodeDescription, productOrServiceCode, productOrServiceCodeDescription,
+                  reasonForModificationDescription, productOrServiceCodeType, descriptionOfContractRequirement,
+                  reasonForModification, createdBy, createdDate,
                   lastModifiedBy, lastModifiedDate, approvedBy, approvedDate, closedBy, closedDate)
         print(record)
         records.append(record)
@@ -140,7 +261,7 @@ def parse_xml(xml_data, ns={'atom': 'http://www.w3.org/2005/Atom', 'ns1': 'https
         if next_url:
             # Fetch the next page of data
             print("### GOING TO NEXT PAGE ###")
-            next_page_data = fetch_fpds_data(None, None, None, url=next_url)
+            next_page_data = fetch_fpds_data(None, None, None, None, url=next_url)
             # Parse the next page and extend the records list
             records.extend(parse_xml(next_page_data, ns))
 
@@ -149,11 +270,21 @@ def parse_xml(xml_data, ns={'atom': 'http://www.w3.org/2005/Atom', 'ns1': 'https
 
 def output_csv(records, filename="fpds_data.csv"):
     # Define the header based on the fields you are extracting from the XML
-    headers = ['Title', 'Modified', 'PIID', 'UEI', 'UEILegalBusinessName', 'UltimateParentUEI', 'UltimateParentUEIName',
-               'ObligatedAmount', 'BaseAndExercisedOptionsValue', 'BaseAndAllOptionsValue', 'SignedDate',
-               'CurrentCompletionDate', 'FundingRequestingDepartmentID', 'FundingRequestingDepartmentName',
+    headers = ['Title', 'Modified', 'PIID', 'modNumber', 'referencedIDVPIID', 'IDVModNumber', 'UEI',
+               'UEILegalBusinessName', 'immediateParentUEI', 'immediateParentUEIName',
+               'domesticParentUEI', 'domesticParentUEIName', 'UltimateParentUEI', 'UltimateParentUEIName',
+               'vendorName', 'vendorAlternateName', 'vendorLegalOrganizationName',
+               'vendorStreetAddress', 'vendorCity', 'vendorState', 'vendorZIPCode', 'vendorCountryCode', 'vendorPhoneNo',
+               'vendorFaxNo', 'vendorCongressionalDistrictCode', 'vendorEntityDataSource',
+               'ObligatedAmount', 'BaseAndExercisedOptionsValue', 'BaseAndAllOptionsValue',
+               'totalObligatedAmount', 'totalBaseAndExercisedOptionsValue', 'totalBaseAndAllOptionsValue','SignedDate',
+               'effectiveDate', 'currentCompletionDate', 'ultimateCompletionDate', 'FundingRequestingDepartmentID',
+               'FundingRequestingDepartmentName',
                'FundingRequestingAgencyID', 'FundingRequestingAgencyName', 'FundingRequestingOfficeID',
-               'FundingRequestingOfficeName', 'ContractingOfficeAgencyID', 'ContractingOfficeID', 'CreatedBy', 'CreatedDate',
+               'FundingRequestingOfficeName', 'ContractingOfficeAgencyID', 'ContractingOfficeID',
+               'PrincipalNAICSCode', 'PrincipalNAICSCodeDescription', 'ProductOrServiceCode',
+               'ProductOrServiceCodeDescription', 'ProductOrServiceCodeType', 'ReasonForModificationDescription',
+               'ProductOrServiceCodeType', 'DescriptionOfContractRequirement',  'CreatedBy', 'CreatedDate',
                'LastModifiedBy', 'LastModifiedDate', 'ApprovedBy', 'ApprovedDate', 'ClosedBy', 'ClosedDate']
 
     # Open the file in write mode
@@ -189,18 +320,20 @@ def insert_into_db(records):
 
 
 def main():
-    start_date = datetime(2000, 1, 1).strftime('%Y-%m-%d')
-    end_date = datetime(2024, 2, 12).strftime('%Y-%m-%d')
+    start_date = datetime(2023, 1, 1).strftime('%Y-%m-%d')
+    end_date = datetime(2024, 2, 14).strftime('%Y-%m-%d')
 
     # Thread runs for each of the following UEIs - up to 10. Can be any criteria instead of UEI.
     ult_UEIs = ["UEI1", "UEI2", "UEI3", "UEI4", "UEI5", "UEI6", "UEI7", "UEI8", "UEI9", "UEI10"]
+
+    NAICS = "5*"  # accepts a six-digit string, e.g. '541330' or wildcard, e.g. '5*' - if not searching NAICS, use None
 
     records = []
 
     # Use ThreadPoolExecutor to run fetch_fpds_data in parallel
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         # Map fetch_fpds_data across your UEIs
-        future_to_uei = {executor.submit(fetch_fpds_data, start_date, end_date, uei): uei for uei in ult_UEIs}
+        future_to_uei = {executor.submit(fetch_fpds_data, start_date, end_date, uei, NAICS): uei for uei in ult_UEIs}
 
         for future in concurrent.futures.as_completed(future_to_uei):
             uei = future_to_uei[future]
