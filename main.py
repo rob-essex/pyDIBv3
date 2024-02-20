@@ -235,22 +235,68 @@ def parse_xml(xml_data, ns={'atom': 'http://www.w3.org/2005/Atom', 'ns1': 'https
         closedDate = get_element_text(entry, 'closedDate', ns)
         # ... continue for other elements as per the FPDS feed
 
-
-        record = (title, modified, PIID, modNumber, referencedIDVPIID, IDVModNumber, UEI, UEILegalBusinessName,
-                  immediateParentUEI, immediateParentUEIName, domesticParentUEI, domesticParentUEIName,
-                  ultimateParentUEI, ultimateParentUEIName, vendorName, vendorAlternateName, vendorLegalOrganizationName,
-                  vendorStreetAddress, vendorCity, vendorState, vendorZIPCode, vendorCountryCode, vendorPhoneNo,
-                  vendorFaxNo, vendorCongressionalDistrictCode, vendorEntityDataSource,
-                  obligatedAmount, baseAndExercisedOptionsValue, baseAndAllOptionsValue, totalObligatedAmount,
-                  totalBaseAndExercisedOptionsValue, totalBaseAndAllOptionsValue, signedDate, effectiveDate,
-                  currentCompletionDate, ultimateCompletionDate, fundingRequestingDepartmentID,
-                  fundingRequestingDepartmentName,
-                  fundingRequestingAgencyID, fundingRequestingAgencyName, fundingRequestingOfficeID,
-                  fundingRequestingOfficeName, contractingOfficeAgencyID, contractingOfficeID, principalNAICSCode,
-                  principalNAICSCodeDescription, productOrServiceCode, productOrServiceCodeDescription,
-                  reasonForModificationDescription, productOrServiceCodeType, descriptionOfContractRequirement,
-                  reasonForModification, createdBy, createdDate,
-                  lastModifiedBy, lastModifiedDate, approvedBy, approvedDate, closedBy, closedDate)
+        record = {
+            'title': title,
+            'modified': modified,
+            'PIID': PIID,
+            'modNumber': modNumber,
+            'referencedIDVPIID': referencedIDVPIID,
+            'IDVModNumber': IDVModNumber,
+            'UEI': UEI,
+            'UEILegalBusinessName': UEILegalBusinessName,
+            'immediateParentUEI': immediateParentUEI,
+            'immediateParentUEIName': immediateParentUEIName,
+            'domesticParentUEI': domesticParentUEI,
+            'domesticParentUEIName': domesticParentUEIName,
+            'ultimateParentUEI': ultimateParentUEI,
+            'ultimateParentUEIName': ultimateParentUEIName,
+            'vendorName': vendorName,
+            'vendorAlternateName': vendorAlternateName,
+            'vendorLegalOrganizationName': vendorLegalOrganizationName,
+            'vendorStreetAddress': vendorStreetAddress,
+            'vendorCity': vendorCity,
+            'vendorState': vendorState,
+            'vendorZIPCode': vendorZIPCode,
+            'vendorCountryCode': vendorCountryCode,
+            'vendorPhoneNo': vendorPhoneNo,
+            'vendorFaxNo': vendorFaxNo,
+            'vendorCongressionalDistrictCode': vendorCongressionalDistrictCode,
+            'vendorEntityDataSource': vendorEntityDataSource,
+            'obligatedAmount': obligatedAmount,
+            'baseAndExercisedOptionsValue': baseAndExercisedOptionsValue,
+            'baseAndAllOptionsValue': baseAndAllOptionsValue,
+            'totalObligatedAmount': totalObligatedAmount,
+            'totalBaseAndExercisedOptionsValue': totalBaseAndExercisedOptionsValue,
+            'totalBaseAndAllOptionsValue': totalBaseAndAllOptionsValue,
+            'signedDate': signedDate,
+            'effectiveDate': effectiveDate,
+            'currentCompletionDate': currentCompletionDate,
+            'ultimateCompletionDate': ultimateCompletionDate,
+            'fundingRequestingDepartmentID': fundingRequestingDepartmentID,
+            'fundingRequestingDepartmentName': fundingRequestingDepartmentName,
+            'fundingRequestingAgencyID': fundingRequestingAgencyID,
+            'fundingRequestingAgencyName': fundingRequestingAgencyName,
+            'fundingRequestingOfficeID': fundingRequestingOfficeID,
+            'fundingRequestingOfficeName': fundingRequestingOfficeName,
+            'contractingOfficeAgencyID': contractingOfficeAgencyID,
+            'contractingOfficeID': contractingOfficeID,
+            'principalNAICSCode': principalNAICSCode,
+            'principalNAICSCodeDescription': principalNAICSCodeDescription,
+            'productOrServiceCode': productOrServiceCode,
+            'productOrServiceCodeDescription': productOrServiceCodeDescription,
+            'reasonForModificationDescription': reasonForModificationDescription,
+            'productOrServiceCodeType': productOrServiceCodeType,
+            'descriptionOfContractRequirement': descriptionOfContractRequirement,
+            'reasonForModification': reasonForModification,
+            'createdBy': createdBy,
+            'createdDate': createdDate,
+            'lastModifiedBy': lastModifiedBy,
+            'lastModifiedDate': lastModifiedDate,
+            'approvedBy': approvedBy,
+            'approvedDate': approvedDate,
+            'closedBy': closedBy,
+            'closedDate': closedDate,
+        }
         print(record)
         records.append(record)
 
@@ -269,34 +315,19 @@ def parse_xml(xml_data, ns={'atom': 'http://www.w3.org/2005/Atom', 'ns1': 'https
 
 
 def output_csv(records, filename="fpds_data.csv"):
-    # Define the header based on the fields you are extracting from the XML
-    headers = ['Title', 'Modified', 'PIID', 'modNumber', 'referencedIDVPIID', 'IDVModNumber', 'UEI',
-               'UEILegalBusinessName', 'immediateParentUEI', 'immediateParentUEIName',
-               'domesticParentUEI', 'domesticParentUEIName', 'UltimateParentUEI', 'UltimateParentUEIName',
-               'vendorName', 'vendorAlternateName', 'vendorLegalOrganizationName',
-               'vendorStreetAddress', 'vendorCity', 'vendorState', 'vendorZIPCode', 'vendorCountryCode', 'vendorPhoneNo',
-               'vendorFaxNo', 'vendorCongressionalDistrictCode', 'vendorEntityDataSource',
-               'ObligatedAmount', 'BaseAndExercisedOptionsValue', 'BaseAndAllOptionsValue',
-               'totalObligatedAmount', 'totalBaseAndExercisedOptionsValue', 'totalBaseAndAllOptionsValue','SignedDate',
-               'effectiveDate', 'currentCompletionDate', 'ultimateCompletionDate', 'FundingRequestingDepartmentID',
-               'FundingRequestingDepartmentName',
-               'FundingRequestingAgencyID', 'FundingRequestingAgencyName', 'FundingRequestingOfficeID',
-               'FundingRequestingOfficeName', 'ContractingOfficeAgencyID', 'ContractingOfficeID',
-               'PrincipalNAICSCode', 'PrincipalNAICSCodeDescription', 'ProductOrServiceCode',
-               'ProductOrServiceCodeDescription', 'ProductOrServiceCodeType', 'ReasonForModificationDescription',
-               'ProductOrServiceCodeType', 'DescriptionOfContractRequirement',  'CreatedBy', 'CreatedDate',
-               'LastModifiedBy', 'LastModifiedDate', 'ApprovedBy', 'ApprovedDate', 'ClosedBy', 'ClosedDate']
+    if records:
+        # Extract headers from the keys of the first record
+        headers = records[0].keys()
 
-    # Open the file in write mode
-    with open(filename, mode='w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
+        with open(filename, mode='w', newline='', encoding='utf-8') as file:
+            writer = csv.DictWriter(file, fieldnames=headers)
 
-        # Write the header
-        writer.writerow(headers)
+            # Write the header
+            writer.writeheader()
 
-        # Write the records
-        for record in records:
-            writer.writerow(record)
+            # Write the records
+            for record in records:
+                writer.writerow(record)
 
     print(f"Data exported to {filename} successfully.")
 
