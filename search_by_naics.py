@@ -108,7 +108,7 @@ def get_nested_attribute(entry, parent_element_name, child_element_name, attribu
     return default
 
 
-def fetch_fpds_data(start_date, end_date, ult_UEI, NAICS, url=None):
+def fetch_fpds_data(start_date, end_date, funding_agency_ID, naics, url=None):
     if not url:
         # Construct the query URL for the first call
         # Example: &LAST_MOD_DATE:[2018-04-01,2018-04-30]
@@ -120,17 +120,17 @@ def fetch_fpds_data(start_date, end_date, ult_UEI, NAICS, url=None):
         else:
             date_query_param = f"+LAST_MOD_DATE:[{start_date},{end_date}]"
 
-        if ult_UEI is None:
-            UEI_query_param = ''
+        if funding_agency_ID is None:
+            agency_query_param = ''
         else:
-            UEI_query_param = f"+ULTIMATE_UEI:\"{ult_UEI}\""
+            agency_query_param = f"+FUNDING_AGENCY_ID:\"{funding_agency_ID}\""
 
-        if NAICS is None:
+        if naics is None:
             NAICS_query_param = ''
         else:
-            NAICS_query_param = f"+PRINCIPAL_NAICS_CODE:\"{NAICS}\""
+            NAICS_query_param = f"+PRINCIPAL_NAICS_CODE:\"{naics}\""
 
-        url = f"{ATOM_FEED_BASE_URL}?FEEDNAME=PUBLIC&q={date_query_param}{UEI_query_param}{NAICS_query_param}"
+        url = f"{ATOM_FEED_BASE_URL}?FEEDNAME=PUBLIC&q={date_query_param}{agency_query_param}{NAICS_query_param}"
 
     # test url https://www.fpds.gov/ezsearch/FEEDS/ATOM?FEEDNAME=PUBLIC&q=LAST_MOD_DATE:[2016-01-01,2023-12-31]+ULTIMATE_UEI:"W6ZWNL4GWP97"
     print("Fetching URL:", url)
@@ -351,20 +351,20 @@ def insert_into_db(records):
 
 
 def main():
-    start_date = datetime(2023, 1, 1).strftime('%Y-%m-%d')
+    start_date = datetime(2024, 2, 13).strftime('%Y-%m-%d')
     end_date = datetime(2024, 2, 14).strftime('%Y-%m-%d')
 
     # Thread runs for each of the following UEIs - up to 10. Can be any criteria instead of UEI.
-    ult_UEIs = ["UEI1", "UEI2", "UEI3", "UEI4", "UEI5", "UEI6", "UEI7", "UEI8", "UEI9", "UEI10"]
+    funding_agency_ID = "2100"
 
-    NAICS = "5*"  # accepts a six-digit string, e.g. '541330' or wildcard, e.g. '5*' - if not searching NAICS, use None
+    naics_codes = ["5413*", "5417*", "8*"]
 
     records = []
 
     # Use ThreadPoolExecutor to run fetch_fpds_data in parallel
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         # Map fetch_fpds_data across your UEIs
-        future_to_uei = {executor.submit(fetch_fpds_data, start_date, end_date, uei, NAICS): uei for uei in ult_UEIs}
+        future_to_uei = {executor.submit(fetch_fpds_data, start_date, end_date, funding_agency_ID, naics): naics for naics in naics_codes}
 
         for future in concurrent.futures.as_completed(future_to_uei):
             uei = future_to_uei[future]
