@@ -354,17 +354,17 @@ def main():
     start_date = datetime(2024, 2, 13).strftime('%Y-%m-%d')
     end_date = datetime(2024, 2, 14).strftime('%Y-%m-%d')
 
-    # Thread runs for each of the following UEIs - up to 10. Can be any criteria instead of UEI.
-    funding_agency_ID = "2100"
+    # Thread runs for each of the following agency IDs - up to 10. The following pulls from ALL agencies.
+    funding_agency_IDs = ["1*","2*","3*","4*","5*","6*","7*","8*","9*","0*"]
 
-    naics_codes = ["5413*", "5417*", "8*"]
+    naics = "5*"
 
     records = []
 
     # Use ThreadPoolExecutor to run fetch_fpds_data in parallel
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         # Map fetch_fpds_data across your UEIs
-        future_to_uei = {executor.submit(fetch_fpds_data, start_date, end_date, funding_agency_ID, naics): naics for naics in naics_codes}
+        future_to_uei = {executor.submit(fetch_fpds_data, start_date, end_date, id, naics): id for id in funding_agency_IDs}
 
         for future in concurrent.futures.as_completed(future_to_uei):
             uei = future_to_uei[future]
