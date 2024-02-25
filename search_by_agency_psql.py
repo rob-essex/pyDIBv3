@@ -336,11 +336,21 @@ def output_csv(records, filename="fpds_data.csv"):
 def preprocess_record(record):
     numeric_fields = ['obligatedAmount', 'baseAndExercisedOptionsValue', 'baseAndAllOptionsValue',
                       'totalObligatedAmount', 'totalBaseAndExercisedOptionsValue', 'totalBaseAndAllOptionsValue']
+    timestamp_fields = ['modified', 'signedDate', 'effectiveDate', 'currentCompletionDate', 'ultimateCompletionDate',
+                        'createdDate', 'lastModifiedDate', 'approvedDate', 'closedDate']
+
+    # Process numeric fields
     for field in numeric_fields:
         if record[field] == '':
-            record[field] = None  # Replace empty string with None
+            record[field] = None  # Replace empty string with None for numeric fields
         else:
-            record[field] = float(record[field])  # Ensure the value is a float
+            record[field] = float(record[field])  # Ensure the value is a float for numeric fields
+
+    # Process timestamp fields
+    for field in timestamp_fields:
+        if record[field] == '':
+            record[field] = None  # Replace empty string with None for timestamp fields
+
     return record
 
 
@@ -372,26 +382,27 @@ def insert_into_db(records):
 
         # Iterate through records and insert each into the database
         for record in records:
+            preprocessed_record = preprocess_record(record)
             # Extract values in the same order as the INSERT statement's columns
             cur.execute(insert_query, (
-                record['title'], record['modified'], record['PIID'], record['modNumber'], record['referencedIDVPIID'],
-                record['IDVModNumber'], record['UEI'], record['UEILegalBusinessName'], record['immediateParentUEI'],
-                record['immediateParentUEIName'], record['domesticParentUEI'], record['domesticParentUEIName'],
-                record['ultimateParentUEI'], record['ultimateParentUEIName'], record['vendorName'],
-                record['vendorAlternateName'], record['vendorLegalOrganizationName'], record['vendorStreetAddress'],
-                record['vendorCity'], record['vendorState'], record['vendorZIPCode'], record['vendorCountryCode'],
-                record['vendorPhoneNo'], record['vendorFaxNo'], record['vendorCongressionalDistrictCode'],
-                record['vendorEntityDataSource'], record['obligatedAmount'], record['baseAndExercisedOptionsValue'],
-                record['baseAndAllOptionsValue'], record['totalObligatedAmount'], record['totalBaseAndExercisedOptionsValue'],
-                record['totalBaseAndAllOptionsValue'], record['signedDate'], record['effectiveDate'],
-                record['currentCompletionDate'], record['ultimateCompletionDate'], record['fundingRequestingDepartmentID'],
-                record['fundingRequestingDepartmentName'], record['fundingRequestingAgencyID'], record['fundingRequestingAgencyName'],
-                record['fundingRequestingOfficeID'], record['fundingRequestingOfficeName'], record['contractingOfficeAgencyID'],
-                record['contractingOfficeID'], record['principalNAICSCode'], record['principalNAICSCodeDescription'],
-                record['productOrServiceCode'], record['productOrServiceCodeDescription'], record['productOrServiceCodeType'],
-                record['descriptionOfContractRequirement'], record['reasonForModification'], record['reasonForModificationDescription'],
-                record['createdBy'], record['createdDate'], record['lastModifiedBy'], record['lastModifiedDate'],
-                record['approvedBy'], record['approvedDate'], record['closedBy'], record['closedDate']
+                preprocessed_record['title'], preprocessed_record['modified'], preprocessed_record['PIID'], preprocessed_record['modNumber'], preprocessed_record['referencedIDVPIID'],
+                preprocessed_record['IDVModNumber'], preprocessed_record['UEI'], preprocessed_record['UEILegalBusinessName'], preprocessed_record['immediateParentUEI'],
+                preprocessed_record['immediateParentUEIName'], preprocessed_record['domesticParentUEI'], preprocessed_record['domesticParentUEIName'],
+                preprocessed_record['ultimateParentUEI'], preprocessed_record['ultimateParentUEIName'], preprocessed_record['vendorName'],
+                preprocessed_record['vendorAlternateName'], preprocessed_record['vendorLegalOrganizationName'], preprocessed_record['vendorStreetAddress'],
+                preprocessed_record['vendorCity'], preprocessed_record['vendorState'], preprocessed_record['vendorZIPCode'], preprocessed_record['vendorCountryCode'],
+                preprocessed_record['vendorPhoneNo'], preprocessed_record['vendorFaxNo'], preprocessed_record['vendorCongressionalDistrictCode'],
+                preprocessed_record['vendorEntityDataSource'], preprocessed_record['obligatedAmount'], preprocessed_record['baseAndExercisedOptionsValue'],
+                preprocessed_record['baseAndAllOptionsValue'], preprocessed_record['totalObligatedAmount'], preprocessed_record['totalBaseAndExercisedOptionsValue'],
+                preprocessed_record['totalBaseAndAllOptionsValue'], preprocessed_record['signedDate'], preprocessed_record['effectiveDate'],
+                preprocessed_record['currentCompletionDate'], preprocessed_record['ultimateCompletionDate'], preprocessed_record['fundingRequestingDepartmentID'],
+                preprocessed_record['fundingRequestingDepartmentName'], preprocessed_record['fundingRequestingAgencyID'], preprocessed_record['fundingRequestingAgencyName'],
+                preprocessed_record['fundingRequestingOfficeID'], preprocessed_record['fundingRequestingOfficeName'], preprocessed_record['contractingOfficeAgencyID'],
+                preprocessed_record['contractingOfficeID'], preprocessed_record['principalNAICSCode'], preprocessed_record['principalNAICSCodeDescription'],
+                preprocessed_record['productOrServiceCode'], preprocessed_record['productOrServiceCodeDescription'], preprocessed_record['productOrServiceCodeType'],
+                preprocessed_record['descriptionOfContractRequirement'], preprocessed_record['reasonForModification'], preprocessed_record['reasonForModificationDescription'],
+                preprocessed_record['createdBy'], preprocessed_record['createdDate'], preprocessed_record['lastModifiedBy'], preprocessed_record['lastModifiedDate'],
+                preprocessed_record['approvedBy'], preprocessed_record['approvedDate'], preprocessed_record['closedBy'], preprocessed_record['closedDate']
             ))
 
         # Commit the transaction
