@@ -424,7 +424,7 @@ def main():
     # Thread runs for each of the following agency IDs - up to 10. The following pulls from ALL agencies.
     funding_agency_IDs = ["1*","2*","3*","4*","5*","6*","7*","8*","9*","0*"]
 
-    naics = "541611"
+    naics = "541330"
 
     records = []
 
