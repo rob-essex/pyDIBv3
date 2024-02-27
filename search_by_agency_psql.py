@@ -1,6 +1,7 @@
 import concurrent.futures
 import csv
 import requests
+import time
 import xml.etree.ElementTree as ET
 import psycopg2
 from datetime import datetime
@@ -418,13 +419,15 @@ def insert_into_db(records):
 
 
 def main():
-    start_date = datetime(2024, 2, 13).strftime('%Y-%m-%d')
+    start_time = time.time()
+
+    start_date = datetime(2023, 2, 13).strftime('%Y-%m-%d')
     end_date = datetime(2024, 2, 14).strftime('%Y-%m-%d')
 
     # Thread runs for each of the following agency IDs - up to 10. The following pulls from ALL agencies.
     funding_agency_IDs = ["1*","2*","3*","4*","5*","6*","7*","8*","9*","0*"]
 
-    naics = "541330"
+    naics = "541*"
 
     records = []
 
@@ -448,7 +451,11 @@ def main():
     # insert_into_db(records)  # enable to insert into postgres
     insert_into_db(records)
 
-    print('Job complete.')
+    end_time = time.time()
+    duration = end_time - start_time
+
+    # Print the number of records processed and job duration
+    print(f'Job complete. Total records parsed and stored: {len(records)}. Time taken: {duration}')
 
 if __name__ == "__main__":
     main()
