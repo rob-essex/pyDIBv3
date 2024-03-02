@@ -9,7 +9,7 @@ from datetime import datetime
 # Database configuration - currently using pgsql Docker container
 DATABASE = "fpds"
 USER = "postgres"  # replace with your username/env variable
-PASSWORD = "fibo112358"  # replace with your password/env variable
+PASSWORD = "default"  # replace with your password/env variable
 HOST = "0.0.0.0"
 PORT = "5432"
 
