@@ -421,13 +421,13 @@ def insert_into_db(records):
 def main():
     start_time = time.time()
 
-    start_date = datetime(2023, 2, 13).strftime('%Y-%m-%d')
-    end_date = datetime(2024, 2, 14).strftime('%Y-%m-%d')
+    start_date = datetime(2022, 8, 27).strftime('%Y-%m-%d')
+    end_date = datetime(2023, 2, 26).strftime('%Y-%m-%d')
 
     # Thread runs for each of the following agency IDs - up to 10. The following pulls from ALL agencies.
     funding_agency_IDs = ["1*","2*","3*","4*","5*","6*","7*","8*","9*","0*"]
 
-    naics = "541*"
+    naics = "541330"
 
     records = []
 
